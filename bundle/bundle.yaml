@@ -1,0 +1,14 @@
+bundle:
+  name: tvmaze_bundle
+
+workspace:
+  host: https://dbc-4a166511-4953.cloud.databricks.com/?o=7474649679847901
+
+targets:
+  dev:
+    default: true
+    config_file: configs/dev.yaml
+  acc:
+    config_file: configs/acc.yaml
+  prod:
+    config_file: configs/prod.yaml
