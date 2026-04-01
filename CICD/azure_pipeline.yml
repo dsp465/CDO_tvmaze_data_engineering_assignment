@@ -5,7 +5,9 @@ trigger:
       - feature/data_assignment
 
 variables:
-  - group: tvmaze-keyvault-secrets   # Azure Key Vault integration
+  - group: tvmaze-keyvault-secrets
+  - name: environment
+    value: dev   # can be overridden in pipeline UI
 
 stages:
 
@@ -36,6 +38,7 @@ stages:
   displayName: "Deploy to Databricks"
   dependsOn: CI
   condition: succeeded()
+
   variables:
     DATABRICKS_HOST: $(databricks-host)
     DATABRICKS_TOKEN: $(databricks-token)
@@ -46,6 +49,12 @@ stages:
         vmImage: ubuntu-latest
       steps:
 
+        # Select environment-specific config
+        - script: |
+            echo "Using environment: $(environment)"
+            cp configs/$(environment).json active_config.json
+          displayName: "Select environment config"
+
         - script: |
             databricks workspace import_dir notebooks/ /Shared/tvmaze/ --overwrite
           displayName: "Deploy notebooks"
@@ -53,7 +62,7 @@ stages:
         - script: |
             databricks jobs reset \
               --job-id $(tvmaze-job-id) \
-              --json-file pipelines/job_definition.json
+              --json-file active_config.json
           displayName: "Deploy job"
 
         - script: echo "Deployment completed"
