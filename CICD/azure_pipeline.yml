@@ -1,0 +1,60 @@
+trigger:
+  branches:
+    include:
+      - main
+      - feature/data_assignment
+
+variables:
+  - group: tvmaze-keyvault-secrets   # Azure Key Vault integration
+
+stages:
+
+# -------------------------
+# CI Stage
+# -------------------------
+- stage: CI
+  displayName: "Run Tests"
+  jobs:
+    - job: tests
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '3.10'
+
+        - script: pip install -r requirements.txt
+          displayName: "Install dependencies"
+
+        - script: pytest tests/
+          displayName: "Execute unit tests"
+
+# -------------------------
+# CD Stage
+# -------------------------
+- stage: Deploy
+  displayName: "Deploy to Databricks"
+  dependsOn: CI
+  condition: succeeded()
+  variables:
+    DATABRICKS_HOST: $(databricks-host)
+    DATABRICKS_TOKEN: $(databricks-token)
+
+  jobs:
+    - job: deploy
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+
+        - script: |
+            databricks workspace import_dir notebooks/ /Shared/tvmaze/ --overwrite
+          displayName: "Deploy notebooks"
+
+        - script: |
+            databricks jobs reset \
+              --job-id $(tvmaze-job-id) \
+              --json-file pipelines/job_definition.json
+          displayName: "Deploy job"
+
+        - script: echo "Deployment completed"
+          displayName: "Done"
