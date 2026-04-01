@@ -2,12 +2,14 @@ trigger:
   branches:
     include:
       - main
-      - feature/data_assignment
+      - acc
+      - dev
+      - feature/*
 
 variables:
   - group: tvmaze-keyvault-secrets
   - name: environment
-    value: dev   # can be overridden in pipeline UI
+    value: dev   # Override in pipeline UI for acc/prod
 
 stages:
 
@@ -15,9 +17,9 @@ stages:
 # CI Stage
 # -------------------------
 - stage: CI
-  displayName: "Run Tests"
+  displayName: "Run Unit Tests"
   jobs:
-    - job: tests
+    - job: run_tests
       pool:
         vmImage: ubuntu-latest
       steps:
@@ -28,14 +30,14 @@ stages:
         - script: pip install -r requirements.txt
           displayName: "Install dependencies"
 
-        - script: pytest tests/
+        - script: pytest unit_tests/
           displayName: "Execute unit tests"
 
 # -------------------------
 # CD Stage
 # -------------------------
-- stage: Deploy
-  displayName: "Deploy to Databricks"
+- stage: CD
+  displayName: "Deploy Databricks Asset Bundle"
   dependsOn: CI
   condition: succeeded()
 
@@ -44,26 +46,20 @@ stages:
     DATABRICKS_TOKEN: $(databricks-token)
 
   jobs:
-    - job: deploy
+    - job: deploy_bundle
       pool:
         vmImage: ubuntu-latest
       steps:
 
-        # Select environment-specific config
         - script: |
-            echo "Using environment: $(environment)"
-            cp configs/$(environment).json active_config.json
-          displayName: "Select environment config"
+            echo "Deploying to environment: $(environment)"
+            databricks bundle validate -t $(environment)
+            databricks bundle deploy -t $(environment)
+          displayName: "Validate & Deploy Bundle"
 
         - script: |
-            databricks workspace import_dir notebooks/ /Shared/tvmaze/ --overwrite
-          displayName: "Deploy notebooks"
+            databricks bundle run tvmaze_job -t $(environment)
+          displayName: "Run Workflow Job"
 
-        - script: |
-            databricks jobs reset \
-              --job-id $(tvmaze-job-id) \
-              --json-file active_config.json
-          displayName: "Deploy job"
-
-        - script: echo "Deployment completed"
+        - script: echo "Deployment completed successfully."
           displayName: "Done"
