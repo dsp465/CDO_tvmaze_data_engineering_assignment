@@ -1,6 +1,11 @@
 resources:
   jobs:
     tvmaze_job:
-      name: tvmaze_etl_acc
+      name: tvmaze_dataflow_job
       tags:
         environment: acc
+
+variables:
+  catalog: tvmaze
+  schema: acc_schema
+  volume_path: /Volumes/tvmaze/bronze/raw/
