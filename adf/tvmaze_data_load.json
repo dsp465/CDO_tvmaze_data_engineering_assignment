@@ -1,0 +1,56 @@
+{
+  "name": "tvmaze_data_load",
+  "properties": {
+    "activities": [
+      {
+        "name": "FetchAPIdata",
+        "type": "DatabricksNotebook",
+        "dependsOn": [],
+        "typeProperties": {
+          "notebookPath": "/Workspace/Users/debasmita.panigrahi@cgi.com/CDO_tvmaze_data_engineering_assignment/bronze/Data_Ingestion_Delta_Lake"
+        },
+        "policy": {
+          "timeout": "01:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60
+        }
+      },
+      {
+        "name": "BronzeToSilver",
+        "type": "DatabricksNotebook",
+        "dependsOn": [
+          {
+            "activity": "FetchAPIdata",
+            "dependencyConditions": [ "Succeeded" ]
+          }
+        ],
+        "typeProperties": {
+          "notebookPath": "/Workspace/Users/debasmita.panigrahi@cgi.com/CDO_tvmaze_data_engineering_assignment/silver/Data_Transformations"
+        },
+        "policy": {
+          "timeout": "01:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60
+        }
+      },
+      {
+        "name": "SilverToGold",
+        "type": "DatabricksNotebook",
+        "dependsOn": [
+          {
+            "activity": "BronzeToSilver",
+            "dependencyConditions": [ "Succeeded" ]
+          }
+        ],
+        "typeProperties": {
+          "notebookPath": "/Workspace/Users/debasmita.panigrahi@cgi.com/CDO_tvmaze_data_engineering_assignment/gold/Data_Aggregations"
+        },
+        "policy": {
+          "timeout": "01:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60
+        }
+      }
+    ]
+  }
+}
